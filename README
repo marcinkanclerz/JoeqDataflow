@@ -1,0 +1,2 @@
+- JoeQ has some API boosts itself (e.g. CFG's direction passed in constructor)
+- Some implementation nits: use of bit vectors for ReachingDefinitions!
