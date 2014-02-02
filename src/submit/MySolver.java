@@ -53,6 +53,7 @@ public class MySolver implements Flow.Solver {
                 while (qit.hasNext()) {
                     Quad q = qit.next();
 
+                    // TODO We don't need to check if it's Entry/Exit quad, CFG does that for us.
                     if (!isEntryQuad(q)) {
                         Flow.DataflowObject previousOut = analysis.newTempVar();
                         previousOut.copy(analysis.getOut(q));
@@ -71,6 +72,35 @@ public class MySolver implements Flow.Solver {
             }
         } else {
             // TODO Analogous but backwards (hasPrevious, setExit etc.).
+            QuadIterator qit = new QuadIterator(cfg, false);
+
+            boolean changesToAnyIn = true;
+            // While changes to any out occur, iterate over basic blocks.
+            while (changesToAnyIn) {
+                qit = new QuadIterator(cfg, false);
+                changesToAnyIn = false;
+
+                // For each basic block B different than Entry compute out[B] and in[B].
+                while (qit.hasPrevious()) {
+                    Quad q = qit.previous();
+
+                    // TODO We don't need to check if it's Entry/Exit quad, CFG does that for us.
+                    if (!isExitQuad(q)) {
+                        Flow.DataflowObject previousIn = analysis.newTempVar();
+                        previousIn.copy(analysis.getIn(q));
+
+                        // in[B] = meet over predecessors P of B of out[P]
+                        Flow.DataflowObject meetResult = meetOperation(qit.successors(), /* out[P] */ false); 
+                        analysis.setOut(q, meetResult);
+
+                        // processQuad also performs the computation:
+                        // out[B] = f_b(in[B])
+                        analysis.processQuad(q);
+
+                        changesToAnyIn |= (!previousIn.equals(analysis.getIn(q)));
+                    }
+                }
+            }
         }
         
         // TODO Why Exit doesn't contain result?
@@ -106,6 +136,9 @@ public class MySolver implements Flow.Solver {
             // Rely on meet's properties.
             while (qit.hasNext()) {
                 q = qit.next();
+                
+                // TODO Just experimenting.
+                if (q == null) continue;
 
                 if (out) {
                     meetResult.meetWith(analysis.getOut(q));
