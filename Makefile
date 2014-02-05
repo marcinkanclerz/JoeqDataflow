@@ -26,6 +26,10 @@ fwd:
 	rm -rf mysolver.out
 	bin/parun flow.Flow submit.MySolver flow.ConstantProp test.Test > mysolver.out
 	diff mysolver.out src/test/test.cp.out
+bkw:  
+	rm -rf mysolver.out
+	bin/parun flow.Flow submit.MySolver flow.Liveness test.Test > mysolver.out
+	diff mysolver.out src/test/test.lv.out
 
 clean:
 	find . -name '*~' -delete

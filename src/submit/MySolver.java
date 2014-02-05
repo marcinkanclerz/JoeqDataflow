@@ -50,31 +50,78 @@ public class MySolver implements Flow.Solver {
                 changesToAnyOut = false;
 
                 // For each basic block B different than Entry compute out[B] and in[B].
+                // We don't need to check if it's Entry/Exit quad, CFG does that for us.                
                 while (qit.hasNext()) {
                     Quad q = qit.next();
 
-                    if (!isEntryQuad(q)) {
-                        Flow.DataflowObject previousOut = analysis.newTempVar();
-                        previousOut.copy(analysis.getOut(q));
+                    Flow.DataflowObject previousOut = analysis.newTempVar();
+                    previousOut.copy(analysis.getOut(q));
 
-                        // in[B] = meet over predecessors P of B of out[P]
-                        Flow.DataflowObject meetResult = meetOperation(qit.predecessors(), /* out[P] */ true); 
-                        analysis.setIn(q, meetResult);
+                    // in[B] = meet over predecessors P of B of out[P]
+                    Flow.DataflowObject meetResult = meetOperation(qit.predecessors(), true); 
+                    analysis.setIn(q, meetResult);
 
-                        // processQuad also performs the computation:
-                        // out[B] = f_b(in[B])
-                        analysis.processQuad(q);
+                    // processQuad also performs the computation:
+                    // out[B] = f_b(in[B])
+                    analysis.processQuad(q);
 
-                        changesToAnyOut |= (!previousOut.equals(analysis.getOut(q)));
-                    }
+                    changesToAnyOut |= (!previousOut.equals(analysis.getOut(q)));
                 }
             }
+
+            // Compute Exit value by looking at outs of quads that lead to exit
+            Set<Quad> exitQuads = new HashSet<Quad>();
+            qit = new QuadIterator(cfg, true);
+            // Make a list of quads that go to exit
+            while (qit.hasNext()) {
+                Quad q = qit.next();
+                if(isBoundaryQuad(qit.successors())) exitQuads.add(q);
+            }
+            // in[EXIT] = meet over predecessors P of EXIT of out[P]
+            analysis.setExit(meetOperation(exitQuads.iterator(), true)); 
+
         } else {
-            // TODO Analogous but backwards (hasPrevious, setExit etc.).
+            QuadIterator qit = new QuadIterator(cfg, false);
+
+            boolean changesToAnyIn = true;
+            // While changes to any out occur, iterate over basic blocks.
+            while (changesToAnyIn) {
+                qit = new QuadIterator(cfg, false);
+                changesToAnyIn = false;
+
+                // For each basic block B different than Entry compute out[B] and in[B].
+                // We don't need to check if it's Entry/Exit quad, CFG does that for us.
+                while (qit.hasPrevious()) {
+                    Quad q = qit.previous();
+
+                    Flow.DataflowObject previousIn = analysis.newTempVar();
+                    previousIn.copy(analysis.getIn(q));
+
+                    // out[B] = meet over successors P of B of in[P]
+                    Flow.DataflowObject meetResult = meetOperation(qit.successors(), false); 
+                    analysis.setOut(q, meetResult);
+
+                    // processQuad also performs the computation:
+                    // in[B] = f_b(out[B])
+                    analysis.processQuad(q);
+
+                    changesToAnyIn |= (!previousIn.equals(analysis.getIn(q)));
+                }
+            }
+
+            // Compute Entry value by looking at ins of quads that lead to entry
+            Set<Quad> entryQuads = new HashSet<Quad>();
+            qit = new QuadIterator(cfg, false);
+            // Make a list of quads that go to exit
+            while (qit.hasPrevious()) {
+                Quad q = qit.previous();
+                if(isBoundaryQuad(qit.predecessors())) entryQuads.add(q);
+            }
+            // out[ENTRY] = meet over successors P of ENTRY of in[P]
+            analysis.setEntry(meetOperation(entryQuads.iterator(), false)); 
+            
         }
         
-        // TODO Why Exit doesn't contain result?
-
         // this needs to come last.
         analysis.postprocess(cfg);
     }
@@ -106,6 +153,9 @@ public class MySolver implements Flow.Solver {
             // Rely on meet's properties.
             while (qit.hasNext()) {
                 q = qit.next();
+                
+                // TODO Just experimenting.
+                if (q == null) continue;
 
                 if (out) {
                     meetResult.meetWith(analysis.getOut(q));
@@ -118,12 +168,15 @@ public class MySolver implements Flow.Solver {
         return meetResult;
     }
 
-    // TODO Statics in java?
-    private boolean isEntryQuad(Quad q) {
-        return q.getID() == 0;
-    }
-
-    private boolean isExitQuad(Quad q) {
-        return q.getID() == 1;
+    // Can be used to check if block is fromEntry or toExit
+    // fromEntry : pass predecessors to qit
+    // toExit: pass successors to qit
+    private boolean isBoundaryQuad(Iterator<Quad> qit) {
+        Quad q;
+        while (qit.hasNext()) {
+            q = qit.next();
+            if (q == null) return true;
+        }
+        return false;
     }
 }
