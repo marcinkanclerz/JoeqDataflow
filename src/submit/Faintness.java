@@ -2,41 +2,10 @@ package submit;
 
 // some useful things to import. add any additional imports you need.
 import joeq.Compiler.Quad.*;
+import joeq.Main.Helper;
 import flow.Flow;
 
-/**
- * Skeleton class for implementing a faint variable analysis
- * using the Flow.Analysis interface.
- */
 public class Faintness implements Flow.Analysis {
-
-    /**
-     * Class for the dataflow objects in the Faintness analysis.
-     * You are free to change this class or move it to another file.
-     */
-    public class MyDataflowObject implements Flow.DataflowObject {
-        /**
-         * Methods from the Flow.DataflowObject interface.
-         * See Flow.java for the meaning of these methods.
-         * These need to be filled in.
-         */
-        public void setToTop() {}
-        public void setToBottom() {}
-        public void meetWith (Flow.DataflowObject o) {}
-        public void copy (Flow.DataflowObject o) {}
-
-        /**
-         * toString() method for the dataflow objects which is used
-         * by postprocess() below.  The format of this method must
-         * be of the form "[REG0, REG1, REG2, ...]", where each REG is
-         * the identifier of a register, and the list of REGs must be sorted.
-         * See src/test/TestFaintness.out for example output of the analysis.
-         * The output format of your reaching definitions analysis must
-         * match this exactly.
-         */
-        @Override
-        public String toString() { return ""; }
-    }
 
     /**
      * Dataflow objects for the interior and entry/exit points
@@ -46,8 +15,15 @@ public class Faintness implements Flow.Analysis {
      * You are free to modify these fields, just make sure to
      * preserve the data printed by postprocess(), which relies on these.
      */
-    private MyDataflowObject[] in, out;
-    private MyDataflowObject entry, exit;
+    private VarSet[] in, out;
+    private VarSet entry, exit;
+    private FaintnessTransferFunction transferfn = new FaintnessTransferFunction();
+    
+    public void processQuad(Quad q) {
+    	transferfn.val.copy(out[q.getID()]);
+    	Helper.runPass(q, transferfn);
+        in[q.getID()].copy(transferfn.val);
+    }
 
     /**
      * This method initializes the datflow framework.
@@ -56,7 +32,7 @@ public class Faintness implements Flow.Analysis {
      */
     public void preprocess(ControlFlowGraph cfg) {
         // this line must come first.
-        System.out.println("Method: "+cfg.getMethod().getName().toString());
+        System.out.println("Method: " + cfg.getMethod().getName().toString());
 
         // get the amount of space we need to allocate for the in/out arrays.
         QuadIterator qit = new QuadIterator(cfg);
@@ -69,20 +45,20 @@ public class Faintness implements Flow.Analysis {
         max += 1;
 
         // allocate the in and out arrays.
-        in = new MyDataflowObject[max];
-        out = new MyDataflowObject[max];
+        in = new VarSet[max];
+        out = new VarSet[max];
 
         // initialize the contents of in and out.
         qit = new QuadIterator(cfg);
         while (qit.hasNext()) {
             int id = qit.next().getID();
-            in[id] = new MyDataflowObject();
-            out[id] = new MyDataflowObject();
+            in[id] = new VarSet();
+            out[id] = new VarSet();
         }
 
         // initialize the entry and exit points.
-        entry = new MyDataflowObject();
-        exit = new MyDataflowObject();
+        entry = new VarSet();
+        exit = new VarSet();
 
         /************************************************
          * Your remaining initialization code goes here *
@@ -114,15 +90,55 @@ public class Faintness implements Flow.Analysis {
      * See Flow.java for the meaning of these methods.
      * These need to be filled in.
      */
-    public boolean isForward () { return false; }
-    public Flow.DataflowObject getEntry() { return null; }
-    public Flow.DataflowObject getExit() { return null; }
-    public void setEntry(Flow.DataflowObject value) {}
-    public void setExit(Flow.DataflowObject value) {}
-    public Flow.DataflowObject getIn(Quad q) { return null; }
-    public Flow.DataflowObject getOut(Quad q) { return null; }
-    public void setIn(Quad q, Flow.DataflowObject value) {}
-    public void setOut(Quad q, Flow.DataflowObject value) {}
-    public Flow.DataflowObject newTempVar() { return null; }
-    public void processQuad(Quad q) {}
+    
+    public boolean isForward() { 
+    	return false; 
+	}
+    
+    /* Routines for interacting with dataflow values. */
+
+    public Flow.DataflowObject getEntry() 
+    { 
+        Flow.DataflowObject result = newTempVar();
+        result.copy(entry); 
+        return result;
+    }
+    public Flow.DataflowObject getExit() 
+    { 
+        Flow.DataflowObject result = newTempVar();
+        result.copy(exit); 
+        return result;
+    }
+    public Flow.DataflowObject getIn(Quad q) 
+    {
+        Flow.DataflowObject result = newTempVar();
+        result.copy(in[q.getID()]); 
+        return result;
+    }
+    public Flow.DataflowObject getOut(Quad q) 
+    {
+        Flow.DataflowObject result = newTempVar();
+        result.copy(out[q.getID()]); 
+        return result;
+    }
+    public void setIn(Quad q, Flow.DataflowObject value) 
+    { 
+        in[q.getID()].copy(value); 
+    }
+    public void setOut(Quad q, Flow.DataflowObject value) 
+    { 
+        out[q.getID()].copy(value); 
+    }
+    public void setEntry(Flow.DataflowObject value) 
+    { 
+        entry.copy(value); 
+    }
+    public void setExit(Flow.DataflowObject value) 
+    { 
+        exit.copy(value); 
+    }
+
+    public Flow.DataflowObject newTempVar() { 
+    	return new VarSet(); 
+	}
 }
