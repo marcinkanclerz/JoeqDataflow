@@ -1,7 +1,11 @@
 package submit;
 
 // some useful things to import. add any additional imports you need.
+import java.util.Set;
+import java.util.TreeSet;
+
 import joeq.Compiler.Quad.*;
+import joeq.Compiler.Quad.Operand.RegisterOperand;
 import joeq.Main.Helper;
 import flow.Flow;
 
@@ -34,6 +38,7 @@ public class Faintness implements Flow.Analysis {
         // this line must come first.
         System.out.println("Method: " + cfg.getMethod().getName().toString());
 
+        /* Generate initial conditions. */
         // get the amount of space we need to allocate for the in/out arrays.
         QuadIterator qit = new QuadIterator(cfg);
         int max = 0;
@@ -47,22 +52,43 @@ public class Faintness implements Flow.Analysis {
         // allocate the in and out arrays.
         in = new VarSet[max];
         out = new VarSet[max];
+        
+        /* Arguments are always there. */
+        Set<String> s = new TreeSet<String>();
+        VarSet.universalSet = s;
+        
+        int numargs = cfg.getMethod().getParamTypes().length;
+        for (int i = 0; i < numargs; i++) {
+            s.add("R"+i);
+        }
+
+        while (qit.hasNext()) {
+            Quad q = qit.next();
+            for (RegisterOperand def : q.getDefinedRegisters()) {
+                s.add(def.getRegister().toString());
+            }
+            for (RegisterOperand use : q.getUsedRegisters()) {
+                s.add(use.getRegister().toString());
+            }
+        }
 
         // initialize the contents of in and out.
         qit = new QuadIterator(cfg);
         while (qit.hasNext()) {
+        	// TODO Is this proper initialization?
             int id = qit.next().getID();
             in[id] = new VarSet();
+            in[id].setToBottom();
             out[id] = new VarSet();
+            out[id].setToBottom();
         }
 
         // initialize the entry and exit points.
         entry = new VarSet();
         exit = new VarSet();
-
-        /************************************************
-         * Your remaining initialization code goes here *
-         ************************************************/
+        exit.setToBottom();
+        
+        transferfn.val = new VarSet();
     }
 
     /**

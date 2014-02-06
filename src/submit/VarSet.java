@@ -1,7 +1,9 @@
 package submit;
 
+import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
+
 import flow.Flow;
 
 public class VarSet implements Flow.DataflowObject {
@@ -10,9 +12,37 @@ public class VarSet implements Flow.DataflowObject {
     public VarSet() { set = new TreeSet<String>(); }
 
     public void setToTop() { set = new TreeSet<String>(); }
-    public void setToBottom() { set = new TreeSet<String>(universalSet); }
+    public void setToBottom() { 
+    	set = new TreeSet<String>(universalSet); 
+	}
 
+    /**
+     * Perform intersection operation.
+     */
     public void meetWith(Flow.DataflowObject o) 
+    {
+    	this.intersectWithSet(o);
+    }
+    
+    public void removeSet(Flow.DataflowObject o) 
+    {
+    	this.set.removeAll(((VarSet)o).set);
+    }
+    
+    public void intersectWithSet(Flow.DataflowObject o) 
+    {
+    	VarSet a = (VarSet)o;
+    	Iterator<String> it = this.set.iterator();
+    	String s;
+    	while (it.hasNext()) {
+    		s = it.next();
+    		if (!a.set.contains(s)) {
+    			this.set.remove(s);
+    		}
+    	}
+    }
+    
+    public void sumWithSet(Flow.DataflowObject o) 
     {
         VarSet a = (VarSet)o;
         set.addAll(a.set);
@@ -41,6 +71,7 @@ public class VarSet implements Flow.DataflowObject {
     }
     
     /**
+     * TODO
      * toString() method for the dataflow objects which is used
      * by postprocess() below.  The format of this method must
      * be of the form "[REG0, REG1, REG2, ...]", where each REG is
@@ -55,6 +86,18 @@ public class VarSet implements Flow.DataflowObject {
         return set.toString();
     }
 
-    public void genVar(String v) {set.add(v);}
-    public void killVar(String v) {set.remove(v);}
+    public void addVar(String v) 
+    {
+    	set.add(v);
+	}
+    
+    public void removeVar(String v) 
+    {
+    	set.remove(v);
+	}
+    
+    public boolean containsVar(String v)
+    {
+    	return set.contains(v);
+    }
 }
