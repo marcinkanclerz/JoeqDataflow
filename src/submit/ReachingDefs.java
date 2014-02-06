@@ -1,7 +1,9 @@
 package submit;
 
 // some useful things to import. add any additional imports you need.
+import java.util.*;
 import joeq.Compiler.Quad.*;
+import joeq.Compiler.Quad.Operand.*;
 import flow.Flow;
 
 /**
@@ -14,16 +16,63 @@ public class ReachingDefs implements Flow.Analysis {
      * Class for the dataflow objects in the ReachingDefs analysis.
      * You are free to change this class or move it to another file.
      */
-    public class MyDataflowObject implements Flow.DataflowObject {
+    public static class DefSet implements Flow.DataflowObject {
+        // Maps definitions(int) and their existence
+        private boolean[] defExistsMap;
+
+        // Maps definitions(int) and corresponding var(String)
+        private static String[] defVarMap;
+        private static void defVarInit(int size){
+            defVarMap = new String[size];
+            for (int i = 0; i < defVarMap.length; i++) {
+                defVarMap[i] = "";
+            }
+        }
+        private static void defVarSetmap(int def, String var){
+            defVarMap[def] = var;
+        }
+
+        // Constructor
+        public DefSet() {
+            defExistsMap = new boolean[defVarMap.length];
+        }
+
         /**
          * Methods from the Flow.DataflowObject interface.
          * See Flow.java for the meaning of these methods.
          * These need to be filled in.
          */
-        public void setToTop() {}
-        public void setToBottom() {}
-        public void meetWith (Flow.DataflowObject o) {}
-        public void copy (Flow.DataflowObject o) {}
+        public void setToTop() {
+            for(int i=0; i<defExistsMap.length; i++) {
+                defExistsMap[i] = false;
+            }
+        }
+        public void setToBottom() {
+            for(int i=0; i<defExistsMap.length; i++) {
+                defExistsMap[i] = true;
+            }  
+        }
+        public void meetWith (Flow.DataflowObject o) {
+            DefSet a = (DefSet) o;
+            for (int i=0; i<defExistsMap.length; i++) {
+                defExistsMap[i] |= a.defExistsMap[i];
+            }
+        }
+        public void copy (Flow.DataflowObject o) {
+            DefSet a = (DefSet) o;
+            for (int i=0; i<defExistsMap.length; i++) {
+                defExistsMap[i] = a.defExistsMap[i];
+            }
+        }
+        public void applyKill (String killVar) {
+            //System.out.println(killVar);
+            for (int i=0; i<defVarMap.length; i++) {
+                if(defVarMap[i].equals(killVar)) defExistsMap[i] = false;
+            }
+        }
+        public void applyGen (int genDef) {
+            defExistsMap[genDef] = true; 
+        }
 
         /**
          * toString() method for the dataflow objects which is used
@@ -35,7 +84,26 @@ public class ReachingDefs implements Flow.Analysis {
          * your reaching definitions analysis must match this exactly.
          */
         @Override
-        public String toString() { return ""; }
+        public String toString() { 
+            String output = "[";
+            for (int i=0; i<defExistsMap.length; i++) {
+                if(defExistsMap[i]){
+                    output+=i;  // Debug: defVarMap[i]
+                    output+=", ";
+                }
+            }
+            if(output.length() > 1) output = output.substring(0, output.length()-2); //remove the last ", "
+            output += "]";
+            return output;
+        }
+
+        @Override
+        public boolean equals (Object o) {
+            if (o instanceof DefSet) {
+                return  Arrays.equals(((DefSet)o).defExistsMap,defExistsMap);
+            }
+            return false;
+        }
     }
 
     /**
@@ -46,8 +114,8 @@ public class ReachingDefs implements Flow.Analysis {
      * You are free to modify these fields, just make sure to
      * preserve the data printed by postprocess(), which relies on these.
      */
-    private MyDataflowObject[] in, out;
-    private MyDataflowObject entry, exit;
+    private DefSet[] in, out;
+    private DefSet entry, exit;
 
     /**
      * This method initializes the datflow framework.
@@ -68,21 +136,36 @@ public class ReachingDefs implements Flow.Analysis {
         }
         max += 1;
 
+        // set up size of tracking vector in DefSet defn.<=>var
+        // has to be done before new Defset() is called because
+        // defn.<=>exists vector is set up based on defn.<=>var size
+        DefSet.defVarInit(max);
+
         // allocate the in and out arrays.
-        in = new MyDataflowObject[max];
-        out = new MyDataflowObject[max];
+        in = new DefSet[max];
+        out = new DefSet[max];
+
+        //System.out.println(in.length);
 
         // initialize the contents of in and out.
         qit = new QuadIterator(cfg);
         while (qit.hasNext()) {
-            int id = qit.next().getID();
-            in[id] = new MyDataflowObject();
-            out[id] = new MyDataflowObject();
+            Quad q = qit.next();
+            int id = q.getID();
+            //System.out.println(id);
+            in[id] = new DefSet();
+            out[id] = new DefSet();
+            // map up the contents of defVarMap while at it
+            String defVar = "";
+            for (RegisterOperand def : q.getDefinedRegisters()) {
+                defVar = def.getRegister().toString();
+            } 
+            DefSet.defVarSetmap(id,defVar);
         }
 
         // initialize the entry and exit points.
-        entry = new MyDataflowObject();
-        exit = new MyDataflowObject();
+        entry = new DefSet();
+        exit = new DefSet();
 
         /************************************************
          * Your remaining initialization code goes here *
@@ -114,15 +197,53 @@ public class ReachingDefs implements Flow.Analysis {
      * See Flow.java for the meaning of these methods.
      * These need to be filled in.
      */
-    public boolean isForward () { return false; }
-    public Flow.DataflowObject getEntry() { return null; }
-    public Flow.DataflowObject getExit() { return null; }
-    public void setEntry(Flow.DataflowObject value) {}
-    public void setExit(Flow.DataflowObject value) {}
-    public Flow.DataflowObject getIn(Quad q) { return null; }
-    public Flow.DataflowObject getOut(Quad q) { return null; }
-    public void setIn(Quad q, Flow.DataflowObject value) {}
-    public void setOut(Quad q, Flow.DataflowObject value) {}
-    public Flow.DataflowObject newTempVar() { return null; }
-    public void processQuad(Quad q) {}
+    public boolean isForward () { return true; }
+    public Flow.DataflowObject getEntry() { 
+        Flow.DataflowObject result = newTempVar();
+        result.copy(entry); 
+        return result;
+    }
+    public Flow.DataflowObject getExit() { 
+        Flow.DataflowObject result = newTempVar();
+        result.copy(exit); 
+        return result;
+    }
+    public void setEntry(Flow.DataflowObject value) {
+        entry.copy(value);
+    }
+    public void setExit(Flow.DataflowObject value) {
+         exit.copy(value);
+    }
+    public Flow.DataflowObject getIn(Quad q) { 
+        Flow.DataflowObject result = newTempVar();
+        result.copy(in[q.getID()]); 
+        return result;
+    }
+    public Flow.DataflowObject getOut(Quad q) { 
+        Flow.DataflowObject result = newTempVar();
+        result.copy(out[q.getID()]); 
+        return result;
+    }
+    public void setIn(Quad q, Flow.DataflowObject value) {
+        in[q.getID()].copy(value);
+    }
+    public void setOut(Quad q, Flow.DataflowObject value) {
+        out[q.getID()].copy(value);
+    }
+    public Flow.DataflowObject newTempVar() { return new DefSet(); }
+
+    public void processQuad(Quad q) {
+        String defVar = "";
+        for (RegisterOperand def : q.getDefinedRegisters()) {
+            defVar = def.getRegister().toString();
+        } 
+        int id = q.getID();
+
+        out[id].copy(in[id]);       //out = x
+        if(!defVar.equals("")){
+            out[id].applyKill(defVar);  //out = x-kill
+            out[id].applyGen(id);       //out = (x-kill)Ugen
+        }
+    }
 }
+
