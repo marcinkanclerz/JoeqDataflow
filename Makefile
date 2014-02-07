@@ -21,15 +21,26 @@ compile: clean
 	# set up parun
 	cat bin/parun-template | sed -e "s|PARUNPATH|${PWD}|g" | sed -e "s|JAVAPATH|${JAVAPATH}|g" > bin/parun
 	chmod a+x bin/parun
+tests: compile cp cp2 lv lv2
 
-fwd:  
+cp:  
 	rm -rf mysolver.out
 	bin/parun flow.Flow submit.MySolver flow.ConstantProp test.Test > mysolver.out
 	diff mysolver.out src/test/test.cp.out
-bkw:  
+
+cp2:  
+	rm -rf mysolver.out
+	bin/parun flow.Flow submit.MySolver flow.ConstantProp test.TestTwo > mysolver.out
+	diff mysolver.out src/test/test2.cp.out
+
+lv:  
 	rm -rf mysolver.out
 	bin/parun flow.Flow submit.MySolver flow.Liveness test.Test > mysolver.out
 	diff mysolver.out src/test/test.lv.out
+lv2:  
+	rm -rf mysolver.out
+	bin/parun flow.Flow submit.MySolver flow.Liveness test.TestTwo > mysolver.out
+	diff mysolver.out src/test/test2.lv.out
 
 clean:
 	find . -name '*~' -delete
