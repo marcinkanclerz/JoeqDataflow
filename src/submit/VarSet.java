@@ -4,12 +4,22 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 
+import joeq.Compiler.Quad.Operand;
+import joeq.Compiler.Quad.Operator;
+import joeq.Compiler.Quad.Operand.RegisterOperand;
 import flow.Flow;
 
 public class VarSet implements Flow.DataflowObject {
     private Set<String> set;
     public static Set<String> universalSet;
     public VarSet() { set = new TreeSet<String>(); }
+    
+    public void addIfOperand(Operand op) {
+    	if (op instanceof RegisterOperand)
+    	{
+    		addVar(((RegisterOperand)op).getRegister().toString());
+    	}
+    }
 
     public void setToTop() { set = new TreeSet<String>(); }
     public void setToBottom() { 

@@ -1,5 +1,7 @@
 package submit;
 
+import java.util.Random;
+
 class TestFaintness {
     /**
      * In this method all variables are faint because the final value is never used.
@@ -11,6 +13,19 @@ class TestFaintness {
         int z = x + y;
         return;
     }
+	
+//	void test2() {
+//		int x = new Random().nextInt();
+//		int y = 2 + x;
+//		int[] a = new int[y];
+//		return;
+//	}
+	
+//	class X {}
+//	void test3() {
+//		int y = 2;
+//		X[] x = new X[y];
+//	}
 
     /**
      * Write your test cases here. Create as many methods as you want.

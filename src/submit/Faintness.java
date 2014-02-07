@@ -62,6 +62,7 @@ public class Faintness implements Flow.Analysis {
             s.add("R"+i);
         }
 
+        qit = new QuadIterator(cfg);
         while (qit.hasNext()) {
             Quad q = qit.next();
             for (RegisterOperand def : q.getDefinedRegisters()) {
@@ -75,12 +76,10 @@ public class Faintness implements Flow.Analysis {
         // initialize the contents of in and out.
         qit = new QuadIterator(cfg);
         while (qit.hasNext()) {
-        	// TODO Is this proper initialization?
             int id = qit.next().getID();
             in[id] = new VarSet();
             in[id].setToBottom();
             out[id] = new VarSet();
-            out[id].setToBottom();
         }
 
         // initialize the entry and exit points.
