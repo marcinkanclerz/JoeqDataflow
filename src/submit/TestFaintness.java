@@ -95,4 +95,62 @@ class TestFaintness {
 //    	int x = 0;
 //    	x = x;
 //    }
+
+    /*
+    *   x is faint after every loop iteration since it is dead 
+    *   after the loop and live for each iteration (next iteration is dependent)
+    */
+    void faintloop(){
+        int x=0;
+        for(int i=0; i<10; i++){
+            x=x+1; 
+        }
+        x=3; // x is dead after this
+    }
+
+
+    /*
+    *   x is faint after every out loop iteration since it is dead 
+    *   after the loop and live for each iteration (next iteration is dependent)
+    *   Since y is used to calculate the faint x (at the end of the inner loop iteration),
+    *   y is also faint there. By the same logic as x y is faint at the end every inner loop iteration too
+    */
+    void faintnestedloops(){
+        int x=0;
+        int y=0;
+        for(int i=0; i<10; i++){
+            for(int j=0; j<10; j++){
+                y=y+1;
+            }
+            x=x+y;
+        }
+        x=3; // x is dead after this
+    }
+
+    /*
+    *   return statement ensures control flow will not y=x+x
+    *   causing x to be dead at the end of x=x+1 causing x to be going into x=x+1
+    */
+    void nullexception(){
+        int x=3; //x is live but faint
+        x = x+1; //x is dead going out due to null poiinter exception
+        return;
+        int y=x+x; //x is alive when entering here
+    }
+
+
+
+    /*
+    *   null pointer exception ensure control flow will not y=x+x
+    *   causing x to be dead at the end of x=x+1 causing x to be going into x=x+1
+    */
+    void nullexception(){
+        int x=3; //x is live but faint
+        x = x+1; //x is dead going out due to null poiinter exception
+        int[] twoArr = new int[2];
+        int z = twoArr[2]; //null pointer exception here
+        int y=x+x; //x is alive when entering here
+    }
+
 }
+
