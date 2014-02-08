@@ -11,13 +11,6 @@ public class FaintnessTransferFunction extends QuadVisitor.EmptyVisitor {
     public VarSet val;
     
     /**
-     * TODO:
-     * - In general the work that's not done is propagation of uses.
-     * 	 e.g.: I'd expect that return x; would mark "x" as used.
-     * - R0 could be managed with getField, setField, getStatic. 
-     */
-    
-    /**
      * visitMove and visitBinary are the only operations actually propagating faintness. 
      */
     

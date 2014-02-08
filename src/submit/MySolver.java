@@ -33,13 +33,6 @@ public class MySolver implements Flow.Solver {
         // this needs to come first.
         analysis.preprocess(cfg);
 
-        /**
-         * TODO
-         * - QuadIterator has constructor defining it's direction, is it applicable?
-         * - Look for optimizations through JoeQ APIs.
-         */
-
-
         if (analysis.isForward()) {
             QuadIterator qit = new QuadIterator(cfg, true);
 
@@ -136,7 +129,6 @@ public class MySolver implements Flow.Solver {
 
             // Initialize meetResult with any quad's in/out value.
             if (out) {
-                // TODO Is this really needed?
                 if (q == null) {
                     meetResult.copy(analysis.getEntry());
                 } else {
@@ -154,7 +146,6 @@ public class MySolver implements Flow.Solver {
             while (qit.hasNext()) {
                 q = qit.next();
                 
-                // TODO Just experimenting.
                 if (q == null) continue;
 
                 if (out) {
@@ -173,10 +164,16 @@ public class MySolver implements Flow.Solver {
     // toExit: pass successors to qit
     private boolean isBoundaryQuad(Iterator<Quad> qit) {
         Quad q;
+        boolean isBoundary = false;
+        
         while (qit.hasNext()) {
             q = qit.next();
-            if (q == null) return true;
+            if (q == null) {
+            	isBoundary = true;
+            	break;
+            }
         }
-        return false;
+        
+        return isBoundary;
     }
 }

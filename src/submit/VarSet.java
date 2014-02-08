@@ -81,7 +81,6 @@ public class VarSet implements Flow.DataflowObject {
     }
     
     /**
-     * TODO
      * toString() method for the dataflow objects which is used
      * by postprocess() below.  The format of this method must
      * be of the form "[REG0, REG1, REG2, ...]", where each REG is

@@ -13,144 +13,125 @@ class TestFaintness {
         int z = x + y;
         return;
     }
-	
-//	void test2() {
-//		int x = new Random().nextInt();
-//		int y = 2 + x;
-//		int[] a = new int[y];
-//		return;
-//	}
-	
-//	class X {}
-//	void test3() {
-//		int y = 2;
-//		X[] x = new X[y];
-//	}
-
+    
     /**
      * Write your test cases here. Create as many methods as you want.
      * Run the test from root dir using
      * bin/parun flow.Flow submit.MySolver submit.Faintness submit.TestFaintness
      */
+	
+    /**
+     * Because only binary operator and move operator propagate faintness, y is considered used (live). Thus x as well.
+     * a is dead though.
+     */
+	void test2() {
+		int x = 1;
+		int y = 2 + x;
+		int[] a = new int[y];
+	}
+	
+	/**
+	 * a, i, j are used in control flow, thus used (alive).
+	 * d is returned, thus alive.
+	 * b, c, e are faint.
+	 */
+	int verySneakyTranstiveTest() {
+		int a = 1, b = 1, c = 1, d = 1, e = 1;
+		
+		for (int i = 0; i < a; ++i) {
+			b = c + d;
+			
+			for (int j = 0; j < e; j++) {
+				j = j + j;
+				e = b;
+			}
+		}
+		
+		return d;
+	}
+
+	/**
+	 * b is dead. All other variables (but x in f()) are alive.
+	 * c is used in f(c), thus is used.
+	 * d is used for control flow, thus used.
+	 * a is returned, so it's pretty alive.
+	 */
+	void f(int x) {	}
+    int test3() {
+    	int d = 0, a = 1, b = 1, c = 1;
+    	
+    	while (d < 3) {
+	    	if (d >= 2) {
+	    		a = b;
+	    	} else if (d >= 1) {
+				b = c;
+			} else {
+				f(c);
+			}
+
+	    	d = d + 1;
+    	}
+    	
+    	return a;
+    }
     
-    // TODO Write tests outputs and test against them.
-    // TODO Write documentation about tests as part of the submission.
-    // TODO Write test for move operation.
-    // TODO What about arrays, other types, etc?
-//    int articleTest() {
-//    	int d = 0, a = 1, b = 1, c = 1;
-//    	
-//    	while (d < 3) {
-//	    	if (d >= 2) {
-//	    		a = b;
-//	    	} else if (d >= 1) {
-//				b = c;
-//			} else {
-//				c = 1;
-//			}
-//
-//	    	d = d + 1;
-//    	}
-//    	
-//    	return a;
-//    }
-//    
-//    /**
-//     * x and y are obviously alive. z is somewhere around Ballmer's Peak.
-//     */
-//    int diamondTest() {
-//    	int x = 2, y = 0, z = 0;
-//    	
-//    	if (x == 2) {
-//    		x = y + 1;
-//    	} else {
-//    		y = z;
-//    	}
-//    	
-//    	return x;
-//    }
-//    
-//    /**
-//     * x and y are obviously alive. z is not alive, therefore it is faint.
-//     */
-//    int diamondTest2() {
-//    	int x = 2, y = 0, z = 0;
-//    	
-//    	if (x == 1) {
-//    		x = y;
-//    	} else {
-//    		z = y;
-//    	}
-//    	
-//    	return x;
-//    }
-//    
-//    int sneakyTest() {
-//    	int x = 0;
-//    	x = x;
-//    	return x;
-//    }
-//    
-//    void sneakyTest2() {
-//    	int x = 0;
-//    	x = x;
-//    }
+    /**
+     * z is alive, x is used in control flow (thus used). x is dead.
+     */
+    int diamondTest() {
+    	int x = 2, y = 0, z = 0;
+    	
+    	if (x == 2) {
+    		x = z + 1;
+    	} else {
+    		y = z;
+    	}
+    	
+    	return z;
+    }
+    
+    /**
+     * x is dead, y alive. 
+     */
+    int sneakyTest() {
+    	int x = 0, y = 1;
+    	x = x;
+    	return y;
+    }
+    
+    void sneakyTest2() {
+    	int x = 0;
+    	x = x;
+    }
 
     /*
     *   x is faint after every loop iteration since it is dead 
     *   after the loop and live for each iteration (next iteration is dependent)
     */
-    void faintloop(){
-        int x=0;
-        for(int i=0; i<10; i++){
-            x=x+1; 
+    void faintloop() {
+        int x = 0;
+        for(int i = 0; i < 10; i++){
+            x = x + 1; 
         }
-        x=3; // x is dead after this
+        x = 3; // x is dead after this
     }
 
-
-    /*
+   /**
     *   x is faint after every out loop iteration since it is dead 
     *   after the loop and live for each iteration (next iteration is dependent)
     *   Since y is used to calculate the faint x (at the end of the inner loop iteration),
     *   y is also faint there. By the same logic as x y is faint at the end every inner loop iteration too
     */
-    void faintnestedloops(){
-        int x=0;
-        int y=0;
-        for(int i=0; i<10; i++){
-            for(int j=0; j<10; j++){
-                y=y+1;
+    void faintnestedloops() {
+        int x = 0;
+        int y = 0;
+        for(int i = 0; i < 10; i++){
+            for(int j = 0; j < 10; j++){
+                y = y + 1;
             }
-            x=x+y;
+            x = x + y;
         }
-        x=3; // x is dead after this
+        x = 3; // x is dead after this
     }
-
-    /*
-    *   return statement ensures control flow will not y=x+x
-    *   causing x to be dead at the end of x=x+1 causing x to be going into x=x+1
-    */
-    void nullexception(){
-        int x=3; //x is live but faint
-        x = x+1; //x is dead going out due to null poiinter exception
-        return;
-        int y=x+x; //x is alive when entering here
-    }
-
-
-
-    /*
-    *   null pointer exception ensure control flow will not y=x+x
-    *   causing x to be dead at the end of x=x+1 causing x to be going into x=x+1
-    */
-    void nullexception(){
-        int x=3; //x is live but faint
-        x = x+1; //x is dead going out due to null poiinter exception
-        int[] twoArr = new int[2];
-        int z = twoArr[2]; //null pointer exception here
-        int y=x+x; //x is alive when entering here
-    }
-
 }
 
